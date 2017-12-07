@@ -11,5 +11,5 @@ for deploying VeloCloud Software
 
 ### Who do I talk to? ###
 
-For questions/suggestions to repro please contact
+For questions/suggestions please contact
 deployment@velocloud.net
