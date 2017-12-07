@@ -1,0 +1,10 @@
+<network>
+  <name>inside_interface</name> <!--This is the network name-->
+  <forward mode='hostdev' managed='yes'>
+    <pf dev='eth2'/> <!--Use the netdev name of your SR-IOV devices PF here, no if no list of PCIs is added below all available will be added-->
+      <address type='pci' domain='0x0000' bus='0x06' slot='0x12' function='0x0'/>
+      <address type='pci' domain='0x0000' bus='0x06' slot='0x12' function='0x2'/>
+      <address type='pci' domain='0x0000' bus='0x06' slot='0x12' function='0x4'/>
+  </forward>
+</network>
+
