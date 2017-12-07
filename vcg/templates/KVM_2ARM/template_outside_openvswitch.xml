@@ -1,0 +1,11 @@
+<network>
+<name>public_interface</name> <!--This is the network name-->
+  <model type='virtio'/>
+  <forward mode="bridge"/>
+  <bridge name="publicinterface"/>
+  <virtualport type='openvswitch'></virtualport>
+  <vlan trunk='yes'>
+   <tag id='50'/> <!--Define all the VLANS for this Bridge -->
+   <tag id='51'/> <!--Define all the VLANS for this Bridge -->
+  </vlan>
+</network>

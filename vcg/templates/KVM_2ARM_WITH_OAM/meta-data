@@ -1,0 +1,23 @@
+instance-id: #_Hostname_#
+local-hostname: #_Hostname_#
+network-interfaces: |
+ auto eth0
+ iface eth0 inet static
+  address #_IPv4_Address_#
+  netmask #_IPv4_Netmask_#
+  gateway #_IPv4_Gateway_#
+  dns-nameservers #_DNS_server_primary_# #_DNS_server_secondary_#
+ auto eth1
+ iface eth1 inet static
+  metric '13'
+  address #_MGMT_IPv4_Address_#
+  netmask #_MGMT_IPv4_Netmask_#
+  gateway #_MGMT_IPv4_Gateway_#
+  dns-nameservers #_DNS_server_primary_# #_DNS_server_secondary_#
+ auto eth2
+ iface eth2 inet static
+  address #_OAM_IPv4_Address_#
+  netmask #_OAM_IPv4_Netmask_#
+  up route add -net 10.0.0.0 netmask 255.0.0.0 gw #_OAM_IPv4_Gateway_#
+  up route add -net 192.168.0.0 netmask 255.255.0.0 gw #_OAM_IPv4_Gateway_#
+  dns-nameservers #_DNS_server_primary_# #_DNS_server_secondary_#
