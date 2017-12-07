@@ -12,6 +12,13 @@ runcmd:
   - 'sleep 10'
   - '/opt/vc/bin/vc_procmon restart'
 write_files:
+  - path: "/etc/udev/rules.d/70-persistent-net.rules"
+    permissions: '0644'
+    content: |
+       SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="#_ETH0_MAC_ADDRESS_#", ATTR{type}=="1", KERNEL=="eth*", NAME="eth0"
+       SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="#_ETH1_MAC_ADDRESS_#", ATTR{type}=="1", KERNEL=="eth*", NAME="eth1"
+       # NOTE ETH2 IS OAM IF NO OAM PRESENT THEM REMOVE
+       SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="#_ETH2_MAC_ADDRESS_#", ATTR{type}=="1", KERNEL=="eth*", NAME="eth2"
   - path: "/var/lib/cloud/scripts/per-boot/config_gateway"
     permissions: "0755"
     content: |
