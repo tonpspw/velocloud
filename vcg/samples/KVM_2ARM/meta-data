@@ -1,0 +1,16 @@
+instance-id: test_vcg
+local-hostname: test_vcg
+network-interfaces: |
+ auto eth0
+ iface eth0 inet static
+  address 151.0.0.23
+  netmask 255.255.255.0
+  gateway 151.0.0.4
+  dns-nameservers 8.8.8.8
+ auto eth1
+ iface eth1 inet static
+  metric '13'
+  address 10.156.0.50
+  netmask 255.255.255.0
+  gateway 10.156.0.1
+  dns-nameservers 8.8.8.8
