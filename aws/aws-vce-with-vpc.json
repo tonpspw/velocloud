@@ -1,0 +1,503 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "VpcName" : {
+      "Description" : "Name of the VPC",
+      "Type" : "String"
+    },  
+    "VeloCloudEdgeName" : {
+      "Description" : "Name of VCE to be deployed",
+      "Type" : "String"
+    },  
+    "ActivationKey" : {
+      "Description" : "Virtual Edge Activation Key",
+      "Type" : "String",
+      "AllowedPattern": "^[A-Z0-9-]+$"
+    },
+    "IgnoreCertificateValidation" : {
+      "Description" : "Set to yes if using private or self signed certificate on the VCO",
+      "Type" : "String",
+      "Default" : "false",
+      "AllowedValues" : ["true", "false"]
+    },
+    "VCO" : {
+      "Description" : "VCO IP or FQDN",
+      "Type" : "String",
+      "Default" : "vco21-usvi1.velocloud.net"
+    },
+    "PrivateCidrBlockValue" : {
+      "Description" : "CIDR block for the private side of the VCE",
+      "Type" : "String",
+      "Default" : "172.16.0.0/24"
+    },
+    "PublicCidrBlockValue" : {
+      "Description" : "CIDR block for the public side of the VCE",
+      "Type" : "String",
+      "Default" : "172.16.1.0/24"
+    },
+    "Ge1IpAddr" : {
+      "Description" : "GE1 IP address (must match CIDR block for the public side of the VCE",
+      "Type" : "String",
+      "Default" : "172.16.1.253",
+      "AllowedPattern" : "^[0-9\\.]+"    
+    },
+    "Ge2IpAddr" : {
+      "Description" : "GE2 IP address (must match CIDR block for the public side of the VCE",
+      "Type" : "String",
+      "Default" : "172.16.1.254",
+      "AllowedPattern" : "^[0-9\\.]+"    
+    },
+    "Ge3IpAddr" : {
+      "Description" : "GE3 IP address (must match CIDR block for the private side of the VCE",
+      "Type" : "String",
+      "Default" : "172.16.0.254",
+      "AllowedPattern" : "^[0-9\\.]+"    
+    },
+    "MyKeyName" : {
+      "Description" : "Amazon EC2 Key Pair",
+      "Type" : "AWS::EC2::KeyPair::KeyName"
+    },
+  },
+  "Resources": {
+    "MyVpc": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "172.16.0.0/16",
+        "InstanceTenancy": "default",
+        "EnableDnsSupport": "true",
+        "EnableDnsHostnames": "false",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": { "Ref" : "VpcName" }
+          }
+        ]
+      }
+    },
+    "PublicCidrBlock": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": { "Ref" : "PublicCidrBlockValue" },
+        "AvailabilityZone": "us-east-1e",
+        "VpcId": {
+          "Ref": "MyVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": { "Fn::Join" : [ "", [ { "Ref": "MyVpc" }, "public-subnet" ]] } 
+          }
+        ]
+      }
+    },
+    "PrivateCidrBlock": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": { "Ref" : "PrivateCidrBlockValue" },
+        "AvailabilityZone": "us-east-1e",
+        "VpcId": {
+          "Ref": "MyVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": { "Fn::Join" : [ "", [ { "Ref": "MyVpc" }, "private-subnet" ]] } 
+          }
+        ]
+      }
+    },
+    "InternetGateway": {
+      "Type": "AWS::EC2::InternetGateway"
+    },
+    "dopt98556ff2": {
+      "Type": "AWS::EC2::DHCPOptions",
+      "Properties": {
+        "DomainNameServers": [
+          "AmazonProvidedDNS"
+        ]
+      }
+    },
+    "acl3e91b146": {
+      "Type": "AWS::EC2::NetworkAcl",
+      "Properties": {
+        "VpcId": {
+          "Ref": "MyVpc"
+        }
+      }
+    },
+    "PrivateRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "MyVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "deployment-vpc-route-internal"
+          }
+        ]
+      }
+    },
+    "PublicRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "MyVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "deployment-vpc-route"
+          }
+        ]
+      }
+    },
+    "PublicIpAddress": {
+      "Type": "AWS::EC2::EIP",
+      "DependsOn": [
+        "MyVpcGatewayAttachment"
+      ],
+      "Properties": {
+        "Domain": "vpc"
+      }
+    },
+     "VceInterfaceGe1": {
+      "Type": "AWS::EC2::NetworkInterface",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "PublicCidrBlock"
+        },
+        "PrivateIpAddresses": [
+          {
+            "PrivateIpAddress": { "Ref" : "Ge1IpAddr" },
+            "Primary": "true"
+          }
+        ],
+        "GroupSet": [
+          {
+            "Ref": "sgVeloCloudVirtualEdge241AutogenByAWSMP"
+          }
+        ]
+      }
+    },   
+    "VceInterfaceGe2": {
+      "Type": "AWS::EC2::NetworkInterface",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "PublicCidrBlock"
+        },
+        "PrivateIpAddresses": [
+          {
+            "PrivateIpAddress": { "Ref" : "Ge2IpAddr" },
+            "Primary": "true"
+          }
+        ],
+        "GroupSet": [
+          {
+            "Ref": "sgVeloCloudVirtualEdge241AutogenByAWSMP"
+          }
+        ]
+      }
+    },
+    "VceInterfaceGe3": {
+      "Type": "AWS::EC2::NetworkInterface",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "PrivateCidrBlock"
+        },
+        "PrivateIpAddresses": [
+          {
+            "PrivateIpAddress": { "Ref" : "Ge3IpAddr" },
+            "Primary": "true"
+          }
+        ],
+        "GroupSet": [
+          {
+            "Ref": "sgdefault"
+          }
+        ]
+      }
+    },
+    "VeloCloudEdge": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "DisableApiTermination": "false",
+        "InstanceInitiatedShutdownBehavior": "stop",
+        "EbsOptimized": "true",
+        "ImageId": "ami-da7a56cc",
+        "InstanceType": "c4.large",
+        "KeyName": { "Ref" : "MyKeyName" },
+        "Monitoring": "false",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": { "Ref" : "VeloCloudEdgeName" }
+          },
+          {
+            "Key": "Owner",
+            "Value": "Kangwarn"
+          },
+          {
+            "Key": "auto:start",
+            "Value": "* * * * *"
+          }
+        ],
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+          "#cloud-config\n",
+          "velocloud:\n",
+          "  vce:\n",
+          "    vco: ", { "Ref": "VCO" }, "\n",
+          "    activation_code: ", { "Ref": "ActivationKey" }, "\n",
+          "    vco_ignore_cert_errors: ", { "Ref": "IgnoreCertificateValidation" }, "\n"
+        ]]}},
+        "NetworkInterfaces": [
+          {
+            "DeleteOnTermination": "false",
+            "NetworkInterfaceId":  { "Ref": "VceInterfaceGe1"},
+            "DeviceIndex": 0
+          },
+          {
+            "DeleteOnTermination": "false",
+            "NetworkInterfaceId":  { "Ref": "VceInterfaceGe2"},
+            "DeviceIndex": 1
+          },
+          {
+            "DeleteOnTermination": "false",
+            "NetworkInterfaceId":  { "Ref": "VceInterfaceGe3"},
+            "DeviceIndex": 2
+          }
+        ]
+      }
+    },
+    "sgdefault": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "default group",
+        "VpcId": {
+          "Ref": "MyVpc"
+        }
+      }
+    },
+    "sgVeloCloudVirtualEdge241AutogenByAWSMP": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "This security group was generated by AWS Marketplace and is based on recommended settings for VeloCloud Virtual Edge version 2.4.1 provided by VeloCloud Networks, Inc.",
+        "VpcId": {
+          "Ref": "MyVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "Virtual Edge Security Group"
+          }
+        ]
+      }
+    },
+    "acl1": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "Properties": {
+        "CidrBlock": "0.0.0.0/0",
+        "Egress": "true",
+        "Protocol": "-1",
+        "RuleAction": "allow",
+        "RuleNumber": "100",
+        "NetworkAclId": {
+          "Ref": "acl3e91b146"
+        }
+      }
+    },
+    "acl2": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "Properties": {
+        "CidrBlock": "0.0.0.0/0",
+        "Protocol": "-1",
+        "RuleAction": "allow",
+        "RuleNumber": "100",
+        "NetworkAclId": {
+          "Ref": "acl3e91b146"
+        }
+      }
+    },
+    "subnetacl1": {
+      "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "acl3e91b146"
+        },
+        "SubnetId": {
+          "Ref": "PublicCidrBlock"
+        }
+      }
+    },
+    "subnetacl2": {
+      "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "acl3e91b146"
+        },
+        "SubnetId": {
+          "Ref": "PrivateCidrBlock"
+        }
+      }
+    },
+    "MyVpcGatewayAttachment": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "VpcId": {
+          "Ref": "MyVpc"
+        },
+        "InternetGatewayId": {
+          "Ref": "InternetGateway"
+        }
+      },
+      "DependsOn": [ "InternetGateway" ]
+    },
+    "PrivateRouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "PrivateRouteTable"
+        },
+        "SubnetId": {
+          "Ref": "PrivateCidrBlock"
+        }
+      }
+    },
+    "PublicRouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "PublicRouteTable"
+        },
+        "SubnetId": {
+          "Ref": "PublicCidrBlock"
+        }
+      }
+    },
+    "PublicDefaultRoute": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "RouteTableId": {
+          "Ref": "PublicRouteTable"
+        },
+        "GatewayId": {
+          "Ref": "InternetGateway"
+        }
+      },
+      "DependsOn": [ "InternetGateway", "MyVpcGatewayAttachment", "PublicRouteTable" ]
+    },
+    "PrivateDefaultRoute": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "RouteTableId": {
+          "Ref": "PrivateRouteTable"
+        },
+        "NetworkInterfaceId": {
+          "Ref": "VceInterfaceGe3"
+        }
+      },
+      "DependsOn": [ "VceInterfaceGe3", "PrivateRouteTable" ]
+    },   
+    "dchpassoc1": {
+      "Type": "AWS::EC2::VPCDHCPOptionsAssociation",
+      "Properties": {
+        "VpcId": {
+          "Ref": "MyVpc"
+        },
+        "DhcpOptionsId": {
+          "Ref": "dopt98556ff2"
+        }
+      }
+    },
+    "assoc1": {
+      "Type": "AWS::EC2::EIPAssociation",
+      "Properties": {
+        "AllocationId": {
+          "Fn::GetAtt": [
+            "PublicIpAddress",
+            "AllocationId"
+          ]
+        },
+        "NetworkInterfaceId": {
+          "Ref": "VceInterfaceGe2"
+        }
+      }
+    },
+    "ingress1": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgVeloCloudVirtualEdge241AutogenByAWSMP"
+        },
+        "IpProtocol": "udp",
+        "FromPort": "161",
+        "ToPort": "161",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "ingress2": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgVeloCloudVirtualEdge241AutogenByAWSMP"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "22",
+        "ToPort": "22",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "ingress3": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgVeloCloudVirtualEdge241AutogenByAWSMP"
+        },
+        "IpProtocol": "udp",
+        "FromPort": "2426",
+        "ToPort": "2426",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "ingress4": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgdefault"
+        },
+        "IpProtocol": "-1",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "egress1": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgVeloCloudVirtualEdge241AutogenByAWSMP"
+        },
+        "IpProtocol": "-1",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "egress2": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgdefault"
+        },
+        "IpProtocol": "-1",
+        "CidrIp": "0.0.0.0/0"
+      }
+    }
+  },
+  "Outputs" : {
+    "PublicIpAddressValue" : {
+      "Description": "Public IP of VCE",  
+      "Value" : { "Ref" : "PublicIpAddress" }
+    }
+  },
+  "Description" : ""
+}
